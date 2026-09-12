@@ -136,6 +136,15 @@ if t then F(t)end
 end
 return r
 end
+L.CharacterAdded:Connect(function()
+task.wait(2)
+LT=nil
+LN=""
+SL=false
+ST=nil
+SN=""
+print("RESPAWN: locks cleared")
+end)
 local CT=nil
 local ABL=nil
 local function FC()
@@ -152,17 +161,27 @@ print("CT:",CT and "OK"or"NO")
 print("ABL:",ABL and "OK"or"NO")
 task.spawn(function()
 while true do
-task.wait(5)
+task.wait(3)
 local nCT,nABL=FC()
-if nCT and nABL then
-if not CT or not ABL then
-CT=nCT
-ABL=nABL
-print("RELOAD CT/ABL")
+if nCT then CT=nCT end
+if nABL then ABL=nABL end
+local ok,newPC=pcall(function()return require(L.PlayerScripts["StarterPlayerScripts Package"].Controller.Character.Punch)end)
+if ok and newPC and newPC~=PC then
+PC=newPC
+if not SS.oP then SS.oP=PC.Punch end
+PC.Punch=function(s,...)
+local r=SS.oP(s,...)
+if ML and not SL then
+local t=GC()
+if t then LT=t.char LN=t.name print("LOCK:",t.name)end
 end
-else
-CT=nCT
-ABL=nABL
+if En then
+local t=GC()
+if t then F(t)end
+end
+return r
+end
+print("REHOOK PUNCH")
 end
 end
 end)
@@ -291,7 +310,7 @@ hb.BackgroundColor3=Color3.fromRGB(48,48,68)
 local t1=Instance.new("TextLabel",hb)
 t1.Size=UDim2.new(1,-50,1,0)
 t1.Position=UDim2.new(0,5,0,0)
-t1.Text="Punch+MLG v36"
+t1.Text="Punch+MLG v37"
 t1.BackgroundTransparency=1
 t1.TextColor3=Color3.new(1,1,1)
 t1.Font=Enum.Font.SourceSansBold
@@ -523,4 +542,4 @@ end
 end
 end)
 SV(Rg)
-print("OK v36")
+print("OK v37")
