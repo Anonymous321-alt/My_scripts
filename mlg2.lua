@@ -74,10 +74,6 @@ end
 end
 end
 end
-if SN~=""then print("SNIPER OFF:",SN)end
-ST=nil
-SN=""
-SL=false
 return nil
 end
 if ML then
@@ -126,7 +122,14 @@ local PC=require(L.PlayerScripts["StarterPlayerScripts Package"].Controller.Char
 if not SS.oP then SS.oP=PC.Punch end
 PC.Punch=function(s,...)
 local r=SS.oP(s,...)
-if ML and not SL then
+if SL then
+if En then
+local t=GM()
+if t then F(t)end
+end
+return r
+end
+if ML and not LT then
 local t=GC()
 if t then LT=t.char LN=t.name print("LOCK:",t.name)end
 end
@@ -140,10 +143,7 @@ L.CharacterAdded:Connect(function()
 task.wait(2)
 LT=nil
 LN=""
-SL=false
-ST=nil
-SN=""
-print("RESPAWN: locks cleared")
+print("RESPAWN: lock cleared")
 end)
 local CT=nil
 local ABL=nil
@@ -171,7 +171,14 @@ PC=newPC
 if not SS.oP then SS.oP=PC.Punch end
 PC.Punch=function(s,...)
 local r=SS.oP(s,...)
-if ML and not SL then
+if SL then
+if En then
+local t=GM()
+if t then F(t)end
+end
+return r
+end
+if ML and not LT then
 local t=GC()
 if t then LT=t.char LN=t.name print("LOCK:",t.name)end
 end
@@ -247,7 +254,7 @@ task.spawn(function()
 while true do
 task.wait(0.1)
 if En then
-local t=GC()
+local t=GM()
 if t then
 hl.Adornee=t.char
 hl.Enabled=true
@@ -310,7 +317,7 @@ hb.BackgroundColor3=Color3.fromRGB(48,48,68)
 local t1=Instance.new("TextLabel",hb)
 t1.Size=UDim2.new(1,-50,1,0)
 t1.Position=UDim2.new(0,5,0,0)
-t1.Text="Punch+MLG v37"
+t1.Text="Punch+MLG v38"
 t1.BackgroundTransparency=1
 t1.TextColor3=Color3.new(1,1,1)
 t1.Font=Enum.Font.SourceSansBold
@@ -526,8 +533,8 @@ else ll.Text="LOCK OFF"ll.TextColor3=Color3.fromRGB(160,160,170)end
 if SL then
 if ST and ST.Parent then
 local u=ST:FindFirstChild("Humanoid")
-if u and u.Health>0 then ol.Text="SNIPER: "..SN ol.TextColor3=Color3.fromRGB(100,200,255)else ol.Text="SNIPER: DEAD"ol.TextColor3=Color3.fromRGB(150,150,150)end
-else ol.Text="SNIPER: NONE"ol.TextColor3=Color3.fromRGB(150,150,150)end
+if u and u.Health>0 then ol.Text="SNIPER: "..SN ol.TextColor3=Color3.fromRGB(100,200,255)else ol.Text="SNIPER: DEAD (re-lock)"ol.TextColor3=Color3.fromRGB(255,100,100)end
+else ol.Text="SNIPER: DEAD (re-lock)"ol.TextColor3=Color3.fromRGB(255,100,100)end
 else ol.Text="SNIPER: OFF"ol.TextColor3=Color3.fromRGB(120,120,120)end
 sl.Text="SPIN: "..(IS and"ON"or"OFF")
 sl.TextColor3=IS and Color3.fromRGB(0,255,100)or Color3.fromRGB(150,150,150)
@@ -542,4 +549,4 @@ end
 end
 end)
 SV(Rg)
-print("OK v37")
+print("OK v38")
