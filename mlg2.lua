@@ -22,6 +22,9 @@ local AB=true
 local ML=true
 local LT=nil
 local LN=""
+local SL=false
+local ST=nil
+local SN=""
 local RP=RaycastParams.new()
 RP.FilterType=Enum.RaycastFilterType.Exclude
 local function LOS(a,b,c)
@@ -56,6 +59,27 @@ table.sort(t,function(a,b)return a.dist<b.dist end)
 return t[1]
 end
 local function GM()
+if SL then
+if ST and ST.Parent then
+local u=ST:FindFirstChild("Humanoid")
+if u and u.Health>0 then
+local c=L.Character
+if c then
+local h=c:FindFirstChild("HumanoidRootPart")
+local q=ST:FindFirstChild("HumanoidRootPart")
+if h and q then
+local d=(q.Position-h.Position).Magnitude
+if d<=TR then return{char=ST,part=q,name=SN,dist=d}end
+end
+end
+end
+end
+if SN~=""then print("SNIPER OFF:",SN)end
+ST=nil
+SN=""
+SL=false
+return nil
+end
 if ML then
 if LT then
 if LT.Parent then
@@ -102,7 +126,7 @@ local PC=require(L.PlayerScripts["StarterPlayerScripts Package"].Controller.Char
 if not SS.oP then SS.oP=PC.Punch end
 PC.Punch=function(s,...)
 local r=SS.oP(s,...)
-if ML then
+if ML and not SL then
 local t=GC()
 if t then LT=t.char LN=t.name print("LOCK:",t.name)end
 end
@@ -126,6 +150,22 @@ end
 CT,ABL=FC()
 print("CT:",CT and "OK"or"NO")
 print("ABL:",ABL and "OK"or"NO")
+task.spawn(function()
+while true do
+task.wait(5)
+local nCT,nABL=FC()
+if nCT and nABL then
+if not CT or not ABL then
+CT=nCT
+ABL=nABL
+print("RELOAD CT/ABL")
+end
+else
+CT=nCT
+ABL=nABL
+end
+end
+end)
 local LY=nil
 local AY=0
 local AT=tick()
@@ -239,7 +279,7 @@ local g=Instance.new("ScreenGui",L:WaitForChild("PlayerGui"))
 g.Name="SPA"
 g.ResetOnSpawn=false
 local f=Instance.new("Frame",g)
-f.Size=UDim2.new(0,260,0,370)
+f.Size=UDim2.new(0,260,0,450)
 f.Position=UDim2.new(0,20,0,20)
 f.BackgroundColor3=Color3.fromRGB(28,28,38)
 f.BorderSizePixel=1
@@ -251,7 +291,7 @@ hb.BackgroundColor3=Color3.fromRGB(48,48,68)
 local t1=Instance.new("TextLabel",hb)
 t1.Size=UDim2.new(1,-50,1,0)
 t1.Position=UDim2.new(0,5,0,0)
-t1.Text="Punch+MLG v35"
+t1.Text="Punch+MLG v36"
 t1.BackgroundTransparency=1
 t1.TextColor3=Color3.new(1,1,1)
 t1.Font=Enum.Font.SourceSansBold
@@ -270,56 +310,72 @@ ct.Size=UDim2.new(1,0,1,-24)
 ct.Position=UDim2.new(0,0,0,24)
 ct.BackgroundTransparency=1
 local tb=Instance.new("TextButton",ct)
-tb.Size=UDim2.new(0,240,0,28)
-tb.Position=UDim2.new(0,10,0,6)
+tb.Size=UDim2.new(0,240,0,26)
+tb.Position=UDim2.new(0,10,0,4)
 tb.Text="PUNCH: ON"
 tb.BackgroundColor3=Color3.fromRGB(40,160,90)
 tb.TextColor3=Color3.new(1,1,1)
 tb.Font=Enum.Font.SourceSansBold
-tb.TextSize=14
+tb.TextSize=13
 local ab=Instance.new("TextButton",ct)
-ab.Size=UDim2.new(0,240,0,28)
-ab.Position=UDim2.new(0,10,0,38)
+ab.Size=UDim2.new(0,240,0,26)
+ab.Position=UDim2.new(0,10,0,34)
 ab.Text="AUTO: ON"
 ab.BackgroundColor3=Color3.fromRGB(40,160,90)
 ab.TextColor3=Color3.new(1,1,1)
 ab.Font=Enum.Font.SourceSansBold
 ab.TextSize=13
 local ml=Instance.new("TextButton",ct)
-ml.Size=UDim2.new(0,240,0,28)
-ml.Position=UDim2.new(0,10,0,70)
+ml.Size=UDim2.new(0,240,0,26)
+ml.Position=UDim2.new(0,10,0,64)
 ml.Text="MLG: OFF"
 ml.BackgroundColor3=Color3.fromRGB(150,50,50)
 ml.TextColor3=Color3.new(1,1,1)
 ml.Font=Enum.Font.SourceSansBold
 ml.TextSize=13
 local lb=Instance.new("TextButton",ct)
-lb.Size=UDim2.new(0,240,0,28)
-lb.Position=UDim2.new(0,10,0,102)
+lb.Size=UDim2.new(0,240,0,26)
+lb.Position=UDim2.new(0,10,0,94)
 lb.Text="LOCK: ON"
 lb.BackgroundColor3=Color3.fromRGB(40,160,90)
 lb.TextColor3=Color3.new(1,1,1)
 lb.Font=Enum.Font.SourceSansBold
 lb.TextSize=12
 local ub=Instance.new("TextButton",ct)
-ub.Size=UDim2.new(0,240,0,22)
-ub.Position=UDim2.new(0,10,0,134)
+ub.Size=UDim2.new(0,240,0,20)
+ub.Position=UDim2.new(0,10,0,124)
 ub.Text="UNLOCK"
 ub.BackgroundColor3=Color3.fromRGB(80,40,40)
 ub.TextColor3=Color3.new(1,1,1)
 ub.Font=Enum.Font.SourceSansBold
 ub.TextSize=11
+local sb=Instance.new("TextButton",ct)
+sb.Size=UDim2.new(0,240,0,26)
+sb.Position=UDim2.new(0,10,0,150)
+sb.Text="SNIPER: NEAREST"
+sb.BackgroundColor3=Color3.fromRGB(60,80,140)
+sb.TextColor3=Color3.new(1,1,1)
+sb.Font=Enum.Font.SourceSansBold
+sb.TextSize=12
+local so=Instance.new("TextButton",ct)
+so.Size=UDim2.new(0,240,0,20)
+so.Position=UDim2.new(0,10,0,180)
+so.Text="SNIPER OFF"
+so.BackgroundColor3=Color3.fromRGB(100,40,40)
+so.TextColor3=Color3.new(1,1,1)
+so.Font=Enum.Font.SourceSansBold
+so.TextSize=11
 local wb=Instance.new("TextButton",ct)
-wb.Size=UDim2.new(0,117,0,28)
-wb.Position=UDim2.new(0,10,0,162)
+wb.Size=UDim2.new(0,117,0,26)
+wb.Position=UDim2.new(0,10,0,206)
 wb.Text="WALL: ON"
 wb.BackgroundColor3=Color3.fromRGB(40,160,90)
 wb.TextColor3=Color3.new(1,1,1)
 wb.Font=Enum.Font.SourceSansBold
 wb.TextSize=12
 local hb2=Instance.new("TextButton",ct)
-hb2.Size=UDim2.new(0,117,0,28)
-hb2.Position=UDim2.new(0,133,0,162)
+hb2.Size=UDim2.new(0,117,0,26)
+hb2.Position=UDim2.new(0,133,0,206)
 hb2.Text="HEIGHT: ON"
 hb2.BackgroundColor3=Color3.fromRGB(40,160,90)
 hb2.TextColor3=Color3.new(1,1,1)
@@ -327,7 +383,7 @@ hb2.Font=Enum.Font.SourceSansBold
 hb2.TextSize=12
 local tr=Instance.new("Frame",ct)
 tr.Size=UDim2.new(0,240,0,8)
-tr.Position=UDim2.new(0,10,0,200)
+tr.Position=UDim2.new(0,10,0,242)
 tr.BackgroundColor3=Color3.fromRGB(70,70,80)
 local fl=Instance.new("Frame",tr)
 fl.Size=UDim2.new(0,0,1,0)
@@ -339,40 +395,56 @@ kn.BackgroundColor3=Color3.new(1,1,1)
 kn.Text=""
 kn.AutoButtonColor=false
 local vb=Instance.new("TextBox",ct)
-vb.Size=UDim2.new(0,240,0,28)
-vb.Position=UDim2.new(0,10,0,220)
+vb.Size=UDim2.new(0,240,0,26)
+vb.Position=UDim2.new(0,10,0,262)
 vb.Text=tostring(Rg)
 vb.BackgroundColor3=Color3.fromRGB(20,20,28)
 vb.TextColor3=Color3.new(1,1,1)
 vb.Font=Enum.Font.SourceSans
-vb.TextSize=14
+vb.TextSize=13
 vb.ClearTextOnFocus=false
 local ll=Instance.new("TextLabel",ct)
-ll.Size=UDim2.new(0,240,0,18)
-ll.Position=UDim2.new(0,10,0,254)
+ll.Size=UDim2.new(0,240,0,16)
+ll.Position=UDim2.new(0,10,0,294)
 ll.Text="LOCK: NONE"
 ll.BackgroundTransparency=1
 ll.TextColor3=Color3.fromRGB(255,200,0)
 ll.Font=Enum.Font.SourceSansBold
 ll.TextSize=11
+local ol=Instance.new("TextLabel",ct)
+ol.Size=UDim2.new(0,240,0,16)
+ol.Position=UDim2.new(0,10,0,312)
+ol.Text="SNIPER: OFF"
+ol.BackgroundTransparency=1
+ol.TextColor3=Color3.fromRGB(100,200,255)
+ol.Font=Enum.Font.SourceSansBold
+ol.TextSize=11
 local sl=Instance.new("TextLabel",ct)
-sl.Size=UDim2.new(0,240,0,18)
-sl.Position=UDim2.new(0,10,0,274)
+sl.Size=UDim2.new(0,240,0,16)
+sl.Position=UDim2.new(0,10,0,330)
 sl.Text="SPIN: OFF"
 sl.BackgroundTransparency=1
 sl.TextColor3=Color3.fromRGB(150,150,150)
 sl.Font=Enum.Font.SourceSansBold
-sl.TextSize=12
+sl.TextSize=11
 local al=Instance.new("TextLabel",ct)
-al.Size=UDim2.new(0,240,0,18)
-al.Position=UDim2.new(0,10,0,294)
+al.Size=UDim2.new(0,240,0,16)
+al.Position=UDim2.new(0,10,0,348)
 al.Text="ANGLE: ---"
 al.BackgroundTransparency=1
 al.TextColor3=Color3.fromRGB(200,200,200)
 al.Font=Enum.Font.SourceSans
 al.TextSize=11
+local cl=Instance.new("TextLabel",ct)
+cl.Size=UDim2.new(0,240,0,16)
+cl.Position=UDim2.new(0,10,0,366)
+cl.Text="CT: ? | ABL: ?"
+cl.BackgroundTransparency=1
+cl.TextColor3=Color3.fromRGB(180,180,180)
+cl.Font=Enum.Font.SourceSans
+cl.TextSize=10
 local mn=false
-local fs=UDim2.new(0,260,0,370)
+local fs=UDim2.new(0,260,0,450)
 local ms=UDim2.new(0,260,0,24)
 mb.MouseButton1Click:Connect(function()
 mn=not mn
@@ -400,6 +472,26 @@ if not ML then LT=nil LN=""end
 lb.Text=ML and"LOCK: ON"or"LOCK: OFF"
 lb.BackgroundColor3=ML and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
 ub.MouseButton1Click:Connect(function()if LT then print("UNLOCK:",LN)end LT=nil LN=""end)
+sb.MouseButton1Click:Connect(function()
+local t=GC()
+if t then
+ST=t.char
+SN=t.name
+SL=true
+print("SNIPER LOCK:",t.name)
+sb.Text="SNIPER: "..t.name
+else
+print("NO TARGET")
+sb.Text="SNIPER: NO TARGET"
+end
+end)
+so.MouseButton1Click:Connect(function()
+if SL then print("SNIPER OFF:",SN)end
+ST=nil
+SN=""
+SL=false
+sb.Text="SNIPER: NEAREST"
+end)
 wb.MouseButton1Click:Connect(function()W=not W wb.Text=W and"WALL: ON"or"WALL: OFF"wb.BackgroundColor3=W and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
 hb2.MouseButton1Click:Connect(function()H=not H hb2.Text=H and"HEIGHT: ON"or"HEIGHT: OFF"hb2.BackgroundColor3=H and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
 task.spawn(function()
@@ -412,6 +504,12 @@ local u=LT:FindFirstChild("Humanoid")
 if u and u.Health>0 then ll.Text="LOCK: "..LN ll.TextColor3=Color3.fromRGB(255,200,0)else ll.Text="LOCK: NONE"ll.TextColor3=Color3.fromRGB(150,150,150)end
 else ll.Text="LOCK: NONE"ll.TextColor3=Color3.fromRGB(150,150,150)end
 else ll.Text="LOCK OFF"ll.TextColor3=Color3.fromRGB(160,160,170)end
+if SL then
+if ST and ST.Parent then
+local u=ST:FindFirstChild("Humanoid")
+if u and u.Health>0 then ol.Text="SNIPER: "..SN ol.TextColor3=Color3.fromRGB(100,200,255)else ol.Text="SNIPER: DEAD"ol.TextColor3=Color3.fromRGB(150,150,150)end
+else ol.Text="SNIPER: NONE"ol.TextColor3=Color3.fromRGB(150,150,150)end
+else ol.Text="SNIPER: OFF"ol.TextColor3=Color3.fromRGB(120,120,120)end
 sl.Text="SPIN: "..(IS and"ON"or"OFF")
 sl.TextColor3=IS and Color3.fromRGB(0,255,100)or Color3.fromRGB(150,150,150)
 local tt=GM()or GC()
@@ -420,8 +518,9 @@ local a=GA(tt)
 al.Text=string.format("ANGLE: %.1f | %s",a,tt.name)
 al.TextColor3=a<MA and Color3.fromRGB(0,255,0)or Color3.fromRGB(200,200,200)
 else al.Text="ANGLE: ---"end
+cl.Text="CT:"..(CT and"OK"or"NO").." | ABL:"..(ABL and"OK"or"NO")
 end
 end
 end)
 SV(Rg)
-print("OK v35")
+print("OK v36")
