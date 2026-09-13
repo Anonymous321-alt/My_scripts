@@ -14,6 +14,7 @@ local H=true
 local MH=5
 local TR=100
 local ME=false
+local AS=false
 local MA=15
 local MS=3.0
 local MC=2.0
@@ -25,6 +26,9 @@ local LN=""
 local SL=false
 local ST=nil
 local SN=""
+local ESP_ON=false
+local ESP_FOLDER=Instance.new("Folder",workspace)
+ESP_FOLDER.Name="ESP_Players"
 local RP=RaycastParams.new()
 RP.FilterType=Enum.RaycastFilterType.Exclude
 local function LOS(a,b,c)
@@ -38,6 +42,27 @@ end
 local function CH(a,b)
 if not H then return true end
 return(b.Position.Y-a.Position.Y)<=MH
+end
+local function makeESP(char)
+if not char or not char.Parent then return end
+for _,v in ipairs(ESP_FOLDER:GetChildren()) do
+if v.Name:find(char.Name) then v:Destroy() end
+end
+for _,part in ipairs(char:GetDescendants()) do
+if part:IsA("BasePart") then
+local box=Instance.new("SelectionBox")
+box.Name=char.Name.."_"..part.Name
+box.Adornee=part
+box.Color3=Color3.fromRGB(255,255,0)
+box.LineThickness=0.08
+box.Transparency=0.3
+box.SurfaceTransparency=0.8
+box.Parent=ESP_FOLDER
+end
+end
+end
+local function clearESP()
+for _,v in ipairs(ESP_FOLDER:GetChildren()) do v:Destroy() end
 end
 local function GC()
 local c=L.Character
@@ -122,13 +147,7 @@ local PC=require(L.PlayerScripts["StarterPlayerScripts Package"].Controller.Char
 if not SS.oP then SS.oP=PC.Punch end
 PC.Punch=function(s,...)
 local r=SS.oP(s,...)
-if SL then
-if En then
-local t=GM()
-if t then F(t)end
-end
-return r
-end
+if not SL then
 if ML and not LT then
 local t=GC()
 if t then LT=t.char LN=t.name print("LOCK:",t.name)end
@@ -136,6 +155,7 @@ end
 if En then
 local t=GC()
 if t then F(t)end
+end
 end
 return r
 end
@@ -171,13 +191,7 @@ PC=newPC
 if not SS.oP then SS.oP=PC.Punch end
 PC.Punch=function(s,...)
 local r=SS.oP(s,...)
-if SL then
-if En then
-local t=GM()
-if t then F(t)end
-end
-return r
-end
+if not SL then
 if ML and not LT then
 local t=GC()
 if t then LT=t.char LN=t.name print("LOCK:",t.name)end
@@ -185,6 +199,7 @@ end
 if En then
 local t=GC()
 if t then F(t)end
+end
 end
 return r
 end
@@ -250,6 +265,45 @@ hl.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
 hl.Enabled=false
 hl.Parent=workspace
 local LA=0
+-- 🔥 ЦИКЛ ESP — обновляет всех каждые 0.2 сек
+task.spawn(function()
+while true do
+task.wait(0.2)
+if ESP_ON then
+for _,p in ipairs(P:GetPlayers()) do
+if p~=L and p.Character then
+makeESP(p.Character)
+end
+end
+else
+clearESP()
+end
+end
+end)
+-- 🔥 Когда новый игрок заходит — сразу подсвечиваем
+P.PlayerAdded:Connect(function(p)
+if p~=L then
+p.CharacterAdded:Connect(function(char)
+task.wait(0.5)
+if ESP_ON then makeESP(char) end
+end)
+if p.Character and ESP_ON then
+task.wait(0.5)
+makeESP(p.Character)
+end
+end
+end)
+-- 🔥 Когда ты респавнишься — обновляем всех
+L.CharacterAdded:Connect(function()
+task.wait(1)
+if ESP_ON then
+for _,p in ipairs(P:GetPlayers()) do
+if p~=L and p.Character then
+makeESP(p.Character)
+end
+end
+end
+end)
 task.spawn(function()
 while true do
 task.wait(0.1)
@@ -269,12 +323,15 @@ task.wait(0.1)
 if ME then
 local t=GM()
 if t then
+if AS then
 if not DS()then
-print("MLG:SPIN")
+print("MLG:SPIN (auto)")
 UA()
 local ws=tick()
 while tick()-ws<MS do task.wait(0.1)if DS()then break end end
 end
+end
+if DS() then
 local aw=tick()
 local sh=false
 while tick()-aw<MS do
@@ -297,6 +354,9 @@ end
 end
 if not sh then print("MLG:miss")end
 task.wait(MC)
+else
+task.wait(0.3)
+end
 else task.wait(0.3)end
 else task.wait(0.5)end
 end
@@ -305,7 +365,7 @@ local g=Instance.new("ScreenGui",L:WaitForChild("PlayerGui"))
 g.Name="SPA"
 g.ResetOnSpawn=false
 local f=Instance.new("Frame",g)
-f.Size=UDim2.new(0,260,0,450)
+f.Size=UDim2.new(0,260,0,530)
 f.Position=UDim2.new(0,20,0,20)
 f.BackgroundColor3=Color3.fromRGB(28,28,38)
 f.BorderSizePixel=1
@@ -317,7 +377,7 @@ hb.BackgroundColor3=Color3.fromRGB(48,48,68)
 local t1=Instance.new("TextLabel",hb)
 t1.Size=UDim2.new(1,-50,1,0)
 t1.Position=UDim2.new(0,5,0,0)
-t1.Text="Punch+MLG v38"
+t1.Text="Punch+MLG v42"
 t1.BackgroundTransparency=1
 t1.TextColor3=Color3.new(1,1,1)
 t1.Font=Enum.Font.SourceSansBold
@@ -359,9 +419,25 @@ ml.BackgroundColor3=Color3.fromRGB(150,50,50)
 ml.TextColor3=Color3.new(1,1,1)
 ml.Font=Enum.Font.SourceSansBold
 ml.TextSize=13
+local asp=Instance.new("TextButton",ct)
+asp.Size=UDim2.new(0,240,0,26)
+asp.Position=UDim2.new(0,10,0,94)
+asp.Text="AUTO SPIN: OFF"
+asp.BackgroundColor3=Color3.fromRGB(150,50,50)
+asp.TextColor3=Color3.new(1,1,1)
+asp.Font=Enum.Font.SourceSansBold
+asp.TextSize=13
+local espBtn=Instance.new("TextButton",ct)
+espBtn.Size=UDim2.new(0,240,0,26)
+espBtn.Position=UDim2.new(0,10,0,124)
+espBtn.Text="ESP: OFF"
+espBtn.BackgroundColor3=Color3.fromRGB(150,50,50)
+espBtn.TextColor3=Color3.new(1,1,1)
+espBtn.Font=Enum.Font.SourceSansBold
+espBtn.TextSize=13
 local lb=Instance.new("TextButton",ct)
 lb.Size=UDim2.new(0,240,0,26)
-lb.Position=UDim2.new(0,10,0,94)
+lb.Position=UDim2.new(0,10,0,154)
 lb.Text="LOCK: ON"
 lb.BackgroundColor3=Color3.fromRGB(40,160,90)
 lb.TextColor3=Color3.new(1,1,1)
@@ -369,7 +445,7 @@ lb.Font=Enum.Font.SourceSansBold
 lb.TextSize=12
 local ub=Instance.new("TextButton",ct)
 ub.Size=UDim2.new(0,240,0,20)
-ub.Position=UDim2.new(0,10,0,124)
+ub.Position=UDim2.new(0,10,0,184)
 ub.Text="UNLOCK"
 ub.BackgroundColor3=Color3.fromRGB(80,40,40)
 ub.TextColor3=Color3.new(1,1,1)
@@ -377,7 +453,7 @@ ub.Font=Enum.Font.SourceSansBold
 ub.TextSize=11
 local sb=Instance.new("TextButton",ct)
 sb.Size=UDim2.new(0,240,0,26)
-sb.Position=UDim2.new(0,10,0,150)
+sb.Position=UDim2.new(0,10,0,210)
 sb.Text="SNIPER: NEAREST"
 sb.BackgroundColor3=Color3.fromRGB(60,80,140)
 sb.TextColor3=Color3.new(1,1,1)
@@ -385,7 +461,7 @@ sb.Font=Enum.Font.SourceSansBold
 sb.TextSize=12
 local so=Instance.new("TextButton",ct)
 so.Size=UDim2.new(0,240,0,20)
-so.Position=UDim2.new(0,10,0,180)
+so.Position=UDim2.new(0,10,0,240)
 so.Text="SNIPER OFF"
 so.BackgroundColor3=Color3.fromRGB(100,40,40)
 so.TextColor3=Color3.new(1,1,1)
@@ -393,7 +469,7 @@ so.Font=Enum.Font.SourceSansBold
 so.TextSize=11
 local wb=Instance.new("TextButton",ct)
 wb.Size=UDim2.new(0,117,0,26)
-wb.Position=UDim2.new(0,10,0,206)
+wb.Position=UDim2.new(0,10,0,266)
 wb.Text="WALL: ON"
 wb.BackgroundColor3=Color3.fromRGB(40,160,90)
 wb.TextColor3=Color3.new(1,1,1)
@@ -401,7 +477,7 @@ wb.Font=Enum.Font.SourceSansBold
 wb.TextSize=12
 local hb2=Instance.new("TextButton",ct)
 hb2.Size=UDim2.new(0,117,0,26)
-hb2.Position=UDim2.new(0,133,0,206)
+hb2.Position=UDim2.new(0,133,0,266)
 hb2.Text="HEIGHT: ON"
 hb2.BackgroundColor3=Color3.fromRGB(40,160,90)
 hb2.TextColor3=Color3.new(1,1,1)
@@ -409,7 +485,7 @@ hb2.Font=Enum.Font.SourceSansBold
 hb2.TextSize=12
 local tr=Instance.new("Frame",ct)
 tr.Size=UDim2.new(0,240,0,8)
-tr.Position=UDim2.new(0,10,0,242)
+tr.Position=UDim2.new(0,10,0,302)
 tr.BackgroundColor3=Color3.fromRGB(70,70,80)
 local fl=Instance.new("Frame",tr)
 fl.Size=UDim2.new(0,0,1,0)
@@ -422,7 +498,7 @@ kn.Text=""
 kn.AutoButtonColor=false
 local vb=Instance.new("TextBox",ct)
 vb.Size=UDim2.new(0,240,0,26)
-vb.Position=UDim2.new(0,10,0,262)
+vb.Position=UDim2.new(0,10,0,322)
 vb.Text=tostring(Rg)
 vb.BackgroundColor3=Color3.fromRGB(20,20,28)
 vb.TextColor3=Color3.new(1,1,1)
@@ -431,7 +507,7 @@ vb.TextSize=13
 vb.ClearTextOnFocus=false
 local ll=Instance.new("TextLabel",ct)
 ll.Size=UDim2.new(0,240,0,16)
-ll.Position=UDim2.new(0,10,0,294)
+ll.Position=UDim2.new(0,10,0,354)
 ll.Text="LOCK: NONE"
 ll.BackgroundTransparency=1
 ll.TextColor3=Color3.fromRGB(255,200,0)
@@ -439,7 +515,7 @@ ll.Font=Enum.Font.SourceSansBold
 ll.TextSize=11
 local ol=Instance.new("TextLabel",ct)
 ol.Size=UDim2.new(0,240,0,16)
-ol.Position=UDim2.new(0,10,0,312)
+ol.Position=UDim2.new(0,10,0,372)
 ol.Text="SNIPER: OFF"
 ol.BackgroundTransparency=1
 ol.TextColor3=Color3.fromRGB(100,200,255)
@@ -447,7 +523,7 @@ ol.Font=Enum.Font.SourceSansBold
 ol.TextSize=11
 local sl=Instance.new("TextLabel",ct)
 sl.Size=UDim2.new(0,240,0,16)
-sl.Position=UDim2.new(0,10,0,330)
+sl.Position=UDim2.new(0,10,0,390)
 sl.Text="SPIN: OFF"
 sl.BackgroundTransparency=1
 sl.TextColor3=Color3.fromRGB(150,150,150)
@@ -455,7 +531,7 @@ sl.Font=Enum.Font.SourceSansBold
 sl.TextSize=11
 local al=Instance.new("TextLabel",ct)
 al.Size=UDim2.new(0,240,0,16)
-al.Position=UDim2.new(0,10,0,348)
+al.Position=UDim2.new(0,10,0,408)
 al.Text="ANGLE: ---"
 al.BackgroundTransparency=1
 al.TextColor3=Color3.fromRGB(200,200,200)
@@ -463,14 +539,14 @@ al.Font=Enum.Font.SourceSans
 al.TextSize=11
 local cl=Instance.new("TextLabel",ct)
 cl.Size=UDim2.new(0,240,0,16)
-cl.Position=UDim2.new(0,10,0,366)
+cl.Position=UDim2.new(0,10,0,426)
 cl.Text="CT: ? | ABL: ?"
 cl.BackgroundTransparency=1
 cl.TextColor3=Color3.fromRGB(180,180,180)
 cl.Font=Enum.Font.SourceSans
 cl.TextSize=10
 local mn=false
-local fs=UDim2.new(0,260,0,450)
+local fs=UDim2.new(0,260,0,530)
 local ms=UDim2.new(0,260,0,24)
 mb.MouseButton1Click:Connect(function()
 mn=not mn
@@ -493,6 +569,13 @@ vb.FocusLost:Connect(function()local n=tonumber(vb.Text)if n then SV(n,true)end 
 tb.MouseButton1Click:Connect(function()En=not En tb.Text=En and"PUNCH: ON"or"PUNCH: OFF"tb.BackgroundColor3=En and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
 ab.MouseButton1Click:Connect(function()AA=not AA ab.Text=AA and"AUTO: ON"or"AUTO: OFF"ab.BackgroundColor3=AA and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
 ml.MouseButton1Click:Connect(function()ME=not ME ml.Text=ME and"MLG: ON"or"MLG: OFF"ml.BackgroundColor3=ME and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
+asp.MouseButton1Click:Connect(function()AS=not AS asp.Text=AS and"AUTO SPIN: ON"or"AUTO SPIN: OFF"asp.BackgroundColor3=AS and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
+espBtn.MouseButton1Click:Connect(function()
+ESP_ON=not ESP_ON
+espBtn.Text=ESP_ON and "ESP: ON" or "ESP: OFF"
+espBtn.BackgroundColor3=ESP_ON and Color3.fromRGB(40,160,90) or Color3.fromRGB(150,50,50)
+if not ESP_ON then clearESP() end
+end)
 lb.MouseButton1Click:Connect(function()ML=not ML
 if not ML then LT=nil LN=""end
 lb.Text=ML and"LOCK: ON"or"LOCK: OFF"
@@ -549,4 +632,4 @@ end
 end
 end)
 SV(Rg)
-print("OK v38")
+print("OK v42")
