@@ -160,8 +160,7 @@ task.wait(2)
 LT=nil
 LN=""
 print("RESPAWN: lock cleared")
-end)
-local CT=nil
+end)local CT=nil
 local ABL=nil
 local function FC()
 if not getgc then return nil,nil end
@@ -333,10 +332,7 @@ else task.wait(0.3)end
 else task.wait(0.5)end
 end
 end)
-
--- ============================================================
--- WALLHOP MODULE v13 (fast anim + fast twist, fixed side)
--- ============================================================
+-- ========== WALLHOP MODULE v13 ==========
 local WH_ENABLED=false
 local WH_MAX_HOPS=3
 local WH_MIN_HOPS=2
@@ -538,9 +534,7 @@ if not h or h.MoveDirection.Magnitude<0.1 then return end
 local hit=WH_findWall()
 if hit then WH_doHop(hit) end
 end)
--- ============================================================
--- END WALLHOP MODULE
--- ============================================================
+-- ========== END WALLHOP ==========
 
 local g=Instance.new("ScreenGui",L:WaitForChild("PlayerGui"))
 g.Name="SPA"
@@ -742,4 +736,92 @@ mn=not mn
 if mn then f.Size=ms ct.Visible=false mb.Text="+"else f.Size=fs ct.Visible=true mb.Text="—"end
 end)
 local function V2(v)return(v-Mn)/(Mx-Mn)*tr.AbsoluteSize.X end
-local function X2(x)re
+local function X2(x)return Mn+math.clamp(x/math.max(tr.AbsoluteSize.X,1),0,1)*(Mx-Mn)end
+local function SV(v,fb)
+v=math.clamp(math.round(v),Mn,Mx)Rg=v
+local x=V2(v)
+kn.Position=UDim2.new(0,x-7,-0.62,0)
+fl.Size=UDim2.new(0,x,1,0)
+if not fb then vb.Text=tostring(v)end
+end
+local dr=false
+kn.InputBegan:Connect(function(i)if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dr=true end end)
+kn.InputEnded:Connect(function(i)if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dr=false end end)
+U.InputChanged:Connect(function(i)if dr and(i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch)then SV(X2(i.Position.X-tr.AbsolutePosition.X))end end)
+vb.FocusLost:Connect(function()local n=tonumber(vb.Text)if n then SV(n,true)end end)
+tb.MouseButton1Click:Connect(function()En=not En tb.Text=En and"PUNCH: ON"or"PUNCH: OFF"tb.BackgroundColor3=En and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
+ab.MouseButton1Click:Connect(function()AA=not AA ab.Text=AA and"AUTO: ON"or"AUTO: OFF"ab.BackgroundColor3=AA and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
+ml.MouseButton1Click:Connect(function()ME=not ME ml.Text=ME and"MLG: ON"or"MLG: OFF"ml.BackgroundColor3=ME and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
+asp.MouseButton1Click:Connect(function()AS=not AS asp.Text=AS and"AUTO SPIN: ON"or"AUTO SPIN: OFF"asp.BackgroundColor3=AS and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
+espBtn.MouseButton1Click:Connect(function()
+ESP_ON=not ESP_ON
+espBtn.Text=ESP_ON and "ESP: ON" or "ESP: OFF"
+espBtn.BackgroundColor3=ESP_ON and Color3.fromRGB(40,160,90) or Color3.fromRGB(150,50,50)
+end)
+whBtn.MouseButton1Click:Connect(function()
+WH_ENABLED=not WH_ENABLED
+whBtn.Text=WH_ENABLED and"WALLHOP: ON"or"WALLHOP: OFF"
+whBtn.BackgroundColor3=WH_ENABLED and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)
+if not WH_ENABLED then
+WH_hops=0
+WH_stopTwist()
+if WH_curAnimTrack then pcall(function()WH_curAnimTrack:Stop(0) end) WH_curAnimTrack=nil end
+end
+end)
+lb.MouseButton1Click:Connect(function()ML=not ML
+if not ML then LT=nil LN=""end
+lb.Text=ML and"LOCK: ON"or"LOCK: OFF"
+lb.BackgroundColor3=ML and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
+ub.MouseButton1Click:Connect(function()if LT then print("UNLOCK:",LN)end LT=nil LN=""end)
+sb.MouseButton1Click:Connect(function()
+local t=GC()
+if t then
+ST=t.char
+SN=t.name
+SL=true
+print("SNIPER LOCK:",t.name)
+sb.Text="SNIPER: "..t.name
+else
+print("NO TARGET")
+sb.Text="SNIPER: NO TARGET"
+end
+end)
+so.MouseButton1Click:Connect(function()
+if SL then print("SNIPER OFF:",SN)end
+ST=nil
+SN=""
+SL=false
+sb.Text="SNIPER: NEAREST"
+end)
+wb.MouseButton1Click:Connect(function()W=not W wb.Text=W and"WALL: ON"or"WALL: OFF"wb.BackgroundColor3=W and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
+hb2.MouseButton1Click:Connect(function()H=not H hb2.Text=H and"HEIGHT: ON"or"HEIGHT: OFF"hb2.BackgroundColor3=H and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
+task.spawn(function()
+while true do
+task.wait(0.15)
+if g and g.Parent then
+if ML then
+if LT and LT.Parent then
+local u=LT:FindFirstChild("Humanoid")
+if u and u.Health>0 then ll.Text="LOCK: "..LN ll.TextColor3=Color3.fromRGB(255,200,0)else ll.Text="LOCK: NONE"ll.TextColor3=Color3.fromRGB(150,150,150)end
+else ll.Text="LOCK: NONE"ll.TextColor3=Color3.fromRGB(150,150,150)end
+else ll.Text="LOCK OFF"ll.TextColor3=Color3.fromRGB(160,160,170)end
+if SL then
+if ST and ST.Parent then
+local u=ST:FindFirstChild("Humanoid")
+if u and u.Health>0 then ol.Text="SNIPER: "..SN ol.TextColor3=Color3.fromRGB(100,200,255)else ol.Text="SNIPER: DEAD (re-lock)"ol.TextColor3=Color3.fromRGB(255,100,100)end
+else ol.Text="SNIPER: DEAD (re-lock)"ol.TextColor3=Color3.fromRGB(255,100,100)end
+else ol.Text="SNIPER: OFF"ol.TextColor3=Color3.fromRGB(120,120,120)end
+sl.Text="SPIN: "..(IS and"ON"or"OFF")
+sl.TextColor3=IS and Color3.fromRGB(0,255,100)or Color3.fromRGB(150,150,150)
+local tt=GM()or GC()
+if tt then
+local a=GA(tt)
+al.Text=string.format("ANGLE: %.1f | %s",a,tt.name)
+al.TextColor3=a<MA and Color3.fromRGB(0,255,0)or Color3.fromRGB(200,200,200)
+else al.Text="ANGLE: ---"end
+cl.Text="CT:"..(CT and"OK"or"NO").." | ABL:"..(ABL and"OK"or"NO")
+end
+end
+end)
+SV(Rg)
+print("OK v42 + WALLHOP")
