@@ -43,27 +43,65 @@ local function CH(a,b)
 if not H then return true end
 return(b.Position.Y-a.Position.Y)<=MH
 end
+-- 🔥 ОПТИМИЗИРОВАННЫЙ ESP — создаём боксы ОДИН РАЗ
+local espCache={}
 local function makeESP(char)
 if not char or not char.Parent then return end
-for _,v in ipairs(ESP_FOLDER:GetChildren()) do
-if v.Name:find(char.Name) then v:Destroy() end
-end
+if espCache[char] then return end -- уже сделано
+local boxes={}
 for _,part in ipairs(char:GetDescendants()) do
 if part:IsA("BasePart") then
 local box=Instance.new("SelectionBox")
-box.Name=char.Name.."_"..part.Name
 box.Adornee=part
 box.Color3=Color3.fromRGB(255,255,0)
-box.LineThickness=0.08
+box.LineThickness=0.05
 box.Transparency=0.3
-box.SurfaceTransparency=0.8
+box.SurfaceTransparency=1  -- 🔥 только контур, без заливки
 box.Parent=ESP_FOLDER
+table.insert(boxes,box)
 end
+end
+espCache[char]=boxes
+end
+local function removeESP(char)
+if espCache[char] then
+for _,box in ipairs(espCache[char]) do
+if box and box.Parent then box:Destroy() end
+end
+espCache[char]=nil
 end
 end
 local function clearESP()
-for _,v in ipairs(ESP_FOLDER:GetChildren()) do v:Destroy() end
+for char,_ in pairs(espCache) do
+removeESP(char)
 end
+for _,v in ipairs(ESP_FOLDER:GetChildren()) do
+v:Destroy()
+end
+espCache={}
+end
+-- 🔥 Подключение к игроку (только когда ESP включён)
+local function hookPlayer(p)
+if p==L then return end
+if p.Character then
+makeESP(p.Character)
+end
+p.CharacterAdded:Connect(function(char)
+if ESP_ON then
+task.wait(0.5)
+makeESP(char)
+end
+end)
+p.CharacterRemoving:Connect(function(char)
+removeESP(char)
+end)
+end
+-- 🔥 Игроки которые уже в игре
+for _,p in ipairs(P:GetPlayers()) do
+hookPlayer(p)
+end
+-- 🔥 Новые игроки
+P.PlayerAdded:Connect(hookPlayer)
 local function GC()
 local c=L.Character
 if not c then return nil end
@@ -265,45 +303,6 @@ hl.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
 hl.Enabled=false
 hl.Parent=workspace
 local LA=0
--- 🔥 ЦИКЛ ESP — обновляет всех каждые 0.2 сек
-task.spawn(function()
-while true do
-task.wait(0.2)
-if ESP_ON then
-for _,p in ipairs(P:GetPlayers()) do
-if p~=L and p.Character then
-makeESP(p.Character)
-end
-end
-else
-clearESP()
-end
-end
-end)
--- 🔥 Когда новый игрок заходит — сразу подсвечиваем
-P.PlayerAdded:Connect(function(p)
-if p~=L then
-p.CharacterAdded:Connect(function(char)
-task.wait(0.5)
-if ESP_ON then makeESP(char) end
-end)
-if p.Character and ESP_ON then
-task.wait(0.5)
-makeESP(p.Character)
-end
-end
-end)
--- 🔥 Когда ты респавнишься — обновляем всех
-L.CharacterAdded:Connect(function()
-task.wait(1)
-if ESP_ON then
-for _,p in ipairs(P:GetPlayers()) do
-if p~=L and p.Character then
-makeESP(p.Character)
-end
-end
-end
-end)
 task.spawn(function()
 while true do
 task.wait(0.1)
@@ -377,7 +376,7 @@ hb.BackgroundColor3=Color3.fromRGB(48,48,68)
 local t1=Instance.new("TextLabel",hb)
 t1.Size=UDim2.new(1,-50,1,0)
 t1.Position=UDim2.new(0,5,0,0)
-t1.Text="Punch+MLG v42"
+t1.Text="Punch+MLG v43"
 t1.BackgroundTransparency=1
 t1.TextColor3=Color3.new(1,1,1)
 t1.Font=Enum.Font.SourceSansBold
@@ -574,7 +573,13 @@ espBtn.MouseButton1Click:Connect(function()
 ESP_ON=not ESP_ON
 espBtn.Text=ESP_ON and "ESP: ON" or "ESP: OFF"
 espBtn.BackgroundColor3=ESP_ON and Color3.fromRGB(40,160,90) or Color3.fromRGB(150,50,50)
-if not ESP_ON then clearESP() end
+if ESP_ON then
+for _,p in ipairs(P:GetPlayers()) do
+if p~=L and p.Character then makeESP(p.Character) end
+end
+else
+clearESP()
+end
 end)
 lb.MouseButton1Click:Connect(function()ML=not ML
 if not ML then LT=nil LN=""end
@@ -632,4 +637,4 @@ end
 end
 end)
 SV(Rg)
-print("OK v42")
+print("OK v43")
