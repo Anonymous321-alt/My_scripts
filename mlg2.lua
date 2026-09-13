@@ -43,65 +43,23 @@ local function CH(a,b)
 if not H then return true end
 return(b.Position.Y-a.Position.Y)<=MH
 end
--- 🔥 ОПТИМИЗИРОВАННЫЙ ESP — создаём боксы ОДИН РАЗ
-local espCache={}
 local function makeESP(char)
 if not char or not char.Parent then return end
-if espCache[char] then return end -- уже сделано
-local boxes={}
-for _,part in ipairs(char:GetDescendants()) do
-if part:IsA("BasePart") then
-local box=Instance.new("SelectionBox")
-box.Adornee=part
-box.Color3=Color3.fromRGB(255,255,0)
-box.LineThickness=0.05
-box.Transparency=0.3
-box.SurfaceTransparency=1  -- 🔥 только контур, без заливки
-box.Parent=ESP_FOLDER
-table.insert(boxes,box)
-end
-end
-espCache[char]=boxes
-end
-local function removeESP(char)
-if espCache[char] then
-for _,box in ipairs(espCache[char]) do
-if box and box.Parent then box:Destroy() end
-end
-espCache[char]=nil
-end
+local old=ESP_FOLDER:FindFirstChild(char.Name)
+if old then old:Destroy() end
+local h=Instance.new("Highlight")
+h.Name=char.Name
+h.Adornee=char
+h.FillColor=Color3.fromRGB(255,255,0)
+h.FillTransparency=0.5
+h.OutlineColor=Color3.fromRGB(255,255,0)
+h.OutlineTransparency=0
+h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+h.Parent=ESP_FOLDER
 end
 local function clearESP()
-for char,_ in pairs(espCache) do
-removeESP(char)
+for _,v in ipairs(ESP_FOLDER:GetChildren()) do v:Destroy() end
 end
-for _,v in ipairs(ESP_FOLDER:GetChildren()) do
-v:Destroy()
-end
-espCache={}
-end
--- 🔥 Подключение к игроку (только когда ESP включён)
-local function hookPlayer(p)
-if p==L then return end
-if p.Character then
-makeESP(p.Character)
-end
-p.CharacterAdded:Connect(function(char)
-if ESP_ON then
-task.wait(0.5)
-makeESP(char)
-end
-end)
-p.CharacterRemoving:Connect(function(char)
-removeESP(char)
-end)
-end
--- 🔥 Игроки которые уже в игре
-for _,p in ipairs(P:GetPlayers()) do
-hookPlayer(p)
-end
--- 🔥 Новые игроки
-P.PlayerAdded:Connect(hookPlayer)
 local function GC()
 local c=L.Character
 if not c then return nil end
@@ -306,6 +264,20 @@ local LA=0
 task.spawn(function()
 while true do
 task.wait(0.1)
+if ESP_ON then
+for _,p in ipairs(P:GetPlayers()) do
+if p~=L and p.Character then
+makeESP(p.Character)
+end
+end
+else
+clearESP()
+end
+end
+end)
+task.spawn(function()
+while true do
+task.wait(0.1)
 if En then
 local t=GM()
 if t then
@@ -314,6 +286,7 @@ hl.Enabled=true
 if AA and(tick()-LA)>=AC then LA=tick()pcall(function()F(t)end)end
 else hl.Enabled=false end
 else hl.Enabled=false end
+end
 end
 end)
 task.spawn(function()
@@ -360,6 +333,215 @@ else task.wait(0.3)end
 else task.wait(0.5)end
 end
 end)
+
+-- ============================================================
+-- WALLHOP MODULE v13 (fast anim + fast twist, fixed side)
+-- ============================================================
+local WH_ENABLED=false
+local WH_MAX_HOPS=3
+local WH_MIN_HOPS=2
+local WH_POWERS={52,60,68}
+local WH_HOP_CD=0.16
+local WH_WALL_DIST=4.5
+local WH_NORMAL_Y_MAX=0.20
+local WH_FWD_DOT=0.15
+local WH_APEX_VY=10
+local WH_MIN_VY=-25
+local WH_HORIZ_KEEP=0.10
+local WH_REACT_MIN=0.02
+local WH_REACT_MAX=0.05
+local WH_START_HESIT=0.08
+local WH_FATIGUE_MIN=0.4
+local WH_FATIGUE_MAX=0.9
+local WH_THINK_CHANCE=0.10
+local WH_THINK_MIN=0.20
+local WH_THINK_MAX=0.35
+local WH_SKIP_CHANCE=0.06
+local WH_MISS_LAST=0.08
+local WH_MOOD_JITTER=3
+local WH_ANIM_DUR=0.15
+local WH_ANIM_JUMP_ID="rbxassetid://507765000"
+local WH_TWIST_ENABLED=true
+local WH_TWIST_MIN_DEG=60
+local WH_TWIST_MAX_DEG=80
+local WH_TWIST_SIGN=-1
+local WH_GRAVITY=196.2
+local WH_hops=0
+local WH_hopTarget=3
+local WH_nextHopAt=0
+local WH_seriesMood=0
+local WH_fatiguedUntil=0
+local WH_skippedStart=false
+local WH_twistConn=nil
+local WH_curAnimTrack=nil
+local WH_rp=RaycastParams.new()
+WH_rp.FilterType=Enum.RaycastFilterType.Exclude
+local function WH_getRoot()
+local c=L.Character
+return c and c:FindFirstChild("HumanoidRootPart")
+end
+local function WH_getHum()
+local c=L.Character
+return c and c:FindFirstChildOfClass("Humanoid")
+end
+local function WH_onGround()
+local h=WH_getHum()
+if not h then return true end
+return h.FloorMaterial~=Enum.Material.Air
+end
+local function WH_findWall()
+local c=L.Character
+local r=WH_getRoot()
+if not c or not r then return nil end
+WH_rp.FilterDescendantsInstances={c}
+local cf=r.CFrame
+local look=cf.LookVector
+local dirs={cf.LookVector,-cf.LookVector,cf.RightVector,-cf.RightVector}
+for _,d in ipairs(dirs) do
+local hit=workspace:Raycast(r.Position,d*WH_WALL_DIST,WH_rp)
+if hit and hit.Instance and hit.Normal then
+if math.abs(hit.Normal.Y)<WH_NORMAL_Y_MAX and look:Dot(-hit.Normal)>WH_FWD_DOT then
+return hit
+end
+end
+end
+return nil
+end
+local function WH_getVel(r)
+local ok,v=pcall(function()return r.AssemblyLinearVelocity end)
+if ok and v then return v end
+return r.Velocity
+end
+local function WH_setVel(r,v)
+local ok=pcall(function()r.AssemblyLinearVelocity=v end)
+if not ok then r.Velocity=v end
+end
+local function WH_playAnim(id)
+local c=L.Character
+if not c then return end
+local h=c:FindFirstChildOfClass("Humanoid")
+local a=h and h:FindFirstChildOfClass("Animator")
+if not a then return end
+if WH_curAnimTrack then
+pcall(function()WH_curAnimTrack:Stop(0) end)
+WH_curAnimTrack=nil
+end
+local anim=Instance.new("Animation")
+anim.AnimationId=id
+local ok,track=pcall(function()return a:LoadAnimation(anim) end)
+if not ok or not track then return end
+WH_curAnimTrack=track
+pcall(function()track:Play(0.02) end)
+task.delay(WH_ANIM_DUR,function()
+if WH_curAnimTrack==track then
+pcall(function()track:Stop(0.03) end)
+WH_curAnimTrack=nil
+end
+end)
+end
+local function WH_startTwist(wallNormal,pwr)
+if not WH_TWIST_ENABLED then return end
+if WH_twistConn then pcall(function()WH_twistConn:Disconnect() end) WH_twistConn=nil end
+local baseDir=Vector3.new(-wallNormal.X,0,-wallNormal.Z)
+if baseDir.Magnitude<0.01 then return end
+baseDir=baseDir.Unit
+local sign=WH_TWIST_SIGN
+local maxAngle=math.rad(WH_TWIST_MIN_DEG+math.random()*(WH_TWIST_MAX_DEG-WH_TWIST_MIN_DEG))
+local dur=(2*pwr)/WH_GRAVITY
+local t0=tick()
+WH_twistConn=R.RenderStepped:Connect(function()
+local t=tick()-t0
+if t>dur then
+pcall(function()WH_twistConn:Disconnect() end)
+WH_twistConn=nil
+return
+end
+local r=WH_getRoot()
+if not r then return end
+local phase=t/dur
+local amp=math.sin(phase*math.pi)^0.55
+local angle=maxAngle*amp*sign
+local dir=(CFrame.Angles(0,angle,0)*baseDir)
+pcall(function()r.CFrame=CFrame.new(r.Position,r.Position+dir) end)
+end)
+end
+local function WH_stopTwist()
+if WH_twistConn then
+pcall(function()WH_twistConn:Disconnect() end)
+WH_twistConn=nil
+end
+end
+local function WH_doHop(hit)
+local r=WH_getRoot()
+if not r then return end
+if WH_hops>=1 and math.random()<WH_SKIP_CHANCE then
+WH_nextHopAt=tick()+WH_HOP_CD+0.1+math.random()*0.1
+return
+end
+if WH_hops>=1 and math.random()<WH_THINK_CHANCE then
+WH_nextHopAt=tick()+WH_THINK_MIN+math.random()*(WH_THINK_MAX-WH_THINK_MIN)
+return
+end
+local idx=math.min(WH_hops+1,#WH_POWERS)
+local pwr=WH_POWERS[idx]+WH_seriesMood+(math.random()-0.5)*2
+if WH_hops==WH_hopTarget-1 and math.random()<WH_MISS_LAST then
+pwr=pwr*0.65
+end
+local v=WH_getVel(r)
+WH_setVel(r,Vector3.new(v.X*WH_HORIZ_KEEP,pwr,v.Z*WH_HORIZ_KEEP))
+WH_playAnim(WH_ANIM_JUMP_ID)
+if hit and hit.Normal then
+WH_startTwist(hit.Normal,pwr)
+end
+WH_hops=WH_hops+1
+local react=WH_REACT_MIN+math.random()*(WH_REACT_MAX-WH_REACT_MIN)
+WH_nextHopAt=tick()+WH_HOP_CD+react
+end
+R.Heartbeat:Connect(function()
+if not WH_ENABLED then
+if WH_hops~=0 then WH_hops=0 end
+WH_stopTwist()
+if WH_curAnimTrack then pcall(function()WH_curAnimTrack:Stop(0) end) WH_curAnimTrack=nil end
+return
+end
+if WH_onGround() then
+WH_stopTwist()
+if WH_hops>=WH_MAX_HOPS then
+WH_fatiguedUntil=tick()+WH_FATIGUE_MIN+math.random()*(WH_FATIGUE_MAX-WH_FATIGUE_MIN)
+end
+if WH_hops>0 then
+WH_seriesMood=(math.random()-0.5)*2*WH_MOOD_JITTER
+end
+WH_hops=0
+WH_hopTarget=(math.random()<0.7)and WH_MAX_HOPS or WH_MIN_HOPS
+WH_skippedStart=false
+return
+end
+if WH_hops>=WH_hopTarget then return end
+if tick()<WH_fatiguedUntil then return end
+if WH_hops==0 and not WH_skippedStart then
+if math.random()<WH_START_HESIT then
+WH_skippedStart=true
+WH_nextHopAt=tick()+0.25+math.random()*0.25
+return
+end
+WH_skippedStart=true
+end
+if tick()<WH_nextHopAt then return end
+local r=WH_getRoot()
+if not r then return end
+local vy=WH_getVel(r).Y
+if vy>WH_APEX_VY then return end
+if vy<WH_MIN_VY then return end
+local h=WH_getHum()
+if not h or h.MoveDirection.Magnitude<0.1 then return end
+local hit=WH_findWall()
+if hit then WH_doHop(hit) end
+end)
+-- ============================================================
+-- END WALLHOP MODULE
+-- ============================================================
+
 local g=Instance.new("ScreenGui",L:WaitForChild("PlayerGui"))
 g.Name="SPA"
 g.ResetOnSpawn=false
@@ -376,7 +558,7 @@ hb.BackgroundColor3=Color3.fromRGB(48,48,68)
 local t1=Instance.new("TextLabel",hb)
 t1.Size=UDim2.new(1,-50,1,0)
 t1.Position=UDim2.new(0,5,0,0)
-t1.Text="Punch+MLG v43"
+t1.Text="Punch+MLG v42"
 t1.BackgroundTransparency=1
 t1.TextColor3=Color3.new(1,1,1)
 t1.Font=Enum.Font.SourceSansBold
@@ -434,9 +616,17 @@ espBtn.BackgroundColor3=Color3.fromRGB(150,50,50)
 espBtn.TextColor3=Color3.new(1,1,1)
 espBtn.Font=Enum.Font.SourceSansBold
 espBtn.TextSize=13
+local whBtn=Instance.new("TextButton",ct)
+whBtn.Size=UDim2.new(0,240,0,26)
+whBtn.Position=UDim2.new(0,10,0,154)
+whBtn.Text="WALLHOP: OFF"
+whBtn.BackgroundColor3=Color3.fromRGB(150,50,50)
+whBtn.TextColor3=Color3.new(1,1,1)
+whBtn.Font=Enum.Font.SourceSansBold
+whBtn.TextSize=13
 local lb=Instance.new("TextButton",ct)
 lb.Size=UDim2.new(0,240,0,26)
-lb.Position=UDim2.new(0,10,0,154)
+lb.Position=UDim2.new(0,10,0,184)
 lb.Text="LOCK: ON"
 lb.BackgroundColor3=Color3.fromRGB(40,160,90)
 lb.TextColor3=Color3.new(1,1,1)
@@ -444,7 +634,7 @@ lb.Font=Enum.Font.SourceSansBold
 lb.TextSize=12
 local ub=Instance.new("TextButton",ct)
 ub.Size=UDim2.new(0,240,0,20)
-ub.Position=UDim2.new(0,10,0,184)
+ub.Position=UDim2.new(0,10,0,214)
 ub.Text="UNLOCK"
 ub.BackgroundColor3=Color3.fromRGB(80,40,40)
 ub.TextColor3=Color3.new(1,1,1)
@@ -452,7 +642,7 @@ ub.Font=Enum.Font.SourceSansBold
 ub.TextSize=11
 local sb=Instance.new("TextButton",ct)
 sb.Size=UDim2.new(0,240,0,26)
-sb.Position=UDim2.new(0,10,0,210)
+sb.Position=UDim2.new(0,10,0,240)
 sb.Text="SNIPER: NEAREST"
 sb.BackgroundColor3=Color3.fromRGB(60,80,140)
 sb.TextColor3=Color3.new(1,1,1)
@@ -460,7 +650,7 @@ sb.Font=Enum.Font.SourceSansBold
 sb.TextSize=12
 local so=Instance.new("TextButton",ct)
 so.Size=UDim2.new(0,240,0,20)
-so.Position=UDim2.new(0,10,0,240)
+so.Position=UDim2.new(0,10,0,270)
 so.Text="SNIPER OFF"
 so.BackgroundColor3=Color3.fromRGB(100,40,40)
 so.TextColor3=Color3.new(1,1,1)
@@ -468,7 +658,7 @@ so.Font=Enum.Font.SourceSansBold
 so.TextSize=11
 local wb=Instance.new("TextButton",ct)
 wb.Size=UDim2.new(0,117,0,26)
-wb.Position=UDim2.new(0,10,0,266)
+wb.Position=UDim2.new(0,10,0,296)
 wb.Text="WALL: ON"
 wb.BackgroundColor3=Color3.fromRGB(40,160,90)
 wb.TextColor3=Color3.new(1,1,1)
@@ -476,7 +666,7 @@ wb.Font=Enum.Font.SourceSansBold
 wb.TextSize=12
 local hb2=Instance.new("TextButton",ct)
 hb2.Size=UDim2.new(0,117,0,26)
-hb2.Position=UDim2.new(0,133,0,266)
+hb2.Position=UDim2.new(0,133,0,296)
 hb2.Text="HEIGHT: ON"
 hb2.BackgroundColor3=Color3.fromRGB(40,160,90)
 hb2.TextColor3=Color3.new(1,1,1)
@@ -484,7 +674,7 @@ hb2.Font=Enum.Font.SourceSansBold
 hb2.TextSize=12
 local tr=Instance.new("Frame",ct)
 tr.Size=UDim2.new(0,240,0,8)
-tr.Position=UDim2.new(0,10,0,302)
+tr.Position=UDim2.new(0,10,0,362)
 tr.BackgroundColor3=Color3.fromRGB(70,70,80)
 local fl=Instance.new("Frame",tr)
 fl.Size=UDim2.new(0,0,1,0)
@@ -497,7 +687,7 @@ kn.Text=""
 kn.AutoButtonColor=false
 local vb=Instance.new("TextBox",ct)
 vb.Size=UDim2.new(0,240,0,26)
-vb.Position=UDim2.new(0,10,0,322)
+vb.Position=UDim2.new(0,10,0,382)
 vb.Text=tostring(Rg)
 vb.BackgroundColor3=Color3.fromRGB(20,20,28)
 vb.TextColor3=Color3.new(1,1,1)
@@ -506,7 +696,7 @@ vb.TextSize=13
 vb.ClearTextOnFocus=false
 local ll=Instance.new("TextLabel",ct)
 ll.Size=UDim2.new(0,240,0,16)
-ll.Position=UDim2.new(0,10,0,354)
+ll.Position=UDim2.new(0,10,0,414)
 ll.Text="LOCK: NONE"
 ll.BackgroundTransparency=1
 ll.TextColor3=Color3.fromRGB(255,200,0)
@@ -514,7 +704,7 @@ ll.Font=Enum.Font.SourceSansBold
 ll.TextSize=11
 local ol=Instance.new("TextLabel",ct)
 ol.Size=UDim2.new(0,240,0,16)
-ol.Position=UDim2.new(0,10,0,372)
+ol.Position=UDim2.new(0,10,0,432)
 ol.Text="SNIPER: OFF"
 ol.BackgroundTransparency=1
 ol.TextColor3=Color3.fromRGB(100,200,255)
@@ -522,7 +712,7 @@ ol.Font=Enum.Font.SourceSansBold
 ol.TextSize=11
 local sl=Instance.new("TextLabel",ct)
 sl.Size=UDim2.new(0,240,0,16)
-sl.Position=UDim2.new(0,10,0,390)
+sl.Position=UDim2.new(0,10,0,450)
 sl.Text="SPIN: OFF"
 sl.BackgroundTransparency=1
 sl.TextColor3=Color3.fromRGB(150,150,150)
@@ -530,7 +720,7 @@ sl.Font=Enum.Font.SourceSansBold
 sl.TextSize=11
 local al=Instance.new("TextLabel",ct)
 al.Size=UDim2.new(0,240,0,16)
-al.Position=UDim2.new(0,10,0,408)
+al.Position=UDim2.new(0,10,0,468)
 al.Text="ANGLE: ---"
 al.BackgroundTransparency=1
 al.TextColor3=Color3.fromRGB(200,200,200)
@@ -538,7 +728,7 @@ al.Font=Enum.Font.SourceSans
 al.TextSize=11
 local cl=Instance.new("TextLabel",ct)
 cl.Size=UDim2.new(0,240,0,16)
-cl.Position=UDim2.new(0,10,0,426)
+cl.Position=UDim2.new(0,10,0,486)
 cl.Text="CT: ? | ABL: ?"
 cl.BackgroundTransparency=1
 cl.TextColor3=Color3.fromRGB(180,180,180)
@@ -552,89 +742,4 @@ mn=not mn
 if mn then f.Size=ms ct.Visible=false mb.Text="+"else f.Size=fs ct.Visible=true mb.Text="—"end
 end)
 local function V2(v)return(v-Mn)/(Mx-Mn)*tr.AbsoluteSize.X end
-local function X2(x)return Mn+math.clamp(x/math.max(tr.AbsoluteSize.X,1),0,1)*(Mx-Mn)end
-local function SV(v,fb)
-v=math.clamp(math.round(v),Mn,Mx)Rg=v
-local x=V2(v)
-kn.Position=UDim2.new(0,x-7,-0.62,0)
-fl.Size=UDim2.new(0,x,1,0)
-if not fb then vb.Text=tostring(v)end
-end
-local dr=false
-kn.InputBegan:Connect(function(i)if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dr=true end end)
-kn.InputEnded:Connect(function(i)if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dr=false end end)
-U.InputChanged:Connect(function(i)if dr and(i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch)then SV(X2(i.Position.X-tr.AbsolutePosition.X))end end)
-vb.FocusLost:Connect(function()local n=tonumber(vb.Text)if n then SV(n,true)end end)
-tb.MouseButton1Click:Connect(function()En=not En tb.Text=En and"PUNCH: ON"or"PUNCH: OFF"tb.BackgroundColor3=En and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
-ab.MouseButton1Click:Connect(function()AA=not AA ab.Text=AA and"AUTO: ON"or"AUTO: OFF"ab.BackgroundColor3=AA and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
-ml.MouseButton1Click:Connect(function()ME=not ME ml.Text=ME and"MLG: ON"or"MLG: OFF"ml.BackgroundColor3=ME and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
-asp.MouseButton1Click:Connect(function()AS=not AS asp.Text=AS and"AUTO SPIN: ON"or"AUTO SPIN: OFF"asp.BackgroundColor3=AS and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
-espBtn.MouseButton1Click:Connect(function()
-ESP_ON=not ESP_ON
-espBtn.Text=ESP_ON and "ESP: ON" or "ESP: OFF"
-espBtn.BackgroundColor3=ESP_ON and Color3.fromRGB(40,160,90) or Color3.fromRGB(150,50,50)
-if ESP_ON then
-for _,p in ipairs(P:GetPlayers()) do
-if p~=L and p.Character then makeESP(p.Character) end
-end
-else
-clearESP()
-end
-end)
-lb.MouseButton1Click:Connect(function()ML=not ML
-if not ML then LT=nil LN=""end
-lb.Text=ML and"LOCK: ON"or"LOCK: OFF"
-lb.BackgroundColor3=ML and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
-ub.MouseButton1Click:Connect(function()if LT then print("UNLOCK:",LN)end LT=nil LN=""end)
-sb.MouseButton1Click:Connect(function()
-local t=GC()
-if t then
-ST=t.char
-SN=t.name
-SL=true
-print("SNIPER LOCK:",t.name)
-sb.Text="SNIPER: "..t.name
-else
-print("NO TARGET")
-sb.Text="SNIPER: NO TARGET"
-end
-end)
-so.MouseButton1Click:Connect(function()
-if SL then print("SNIPER OFF:",SN)end
-ST=nil
-SN=""
-SL=false
-sb.Text="SNIPER: NEAREST"
-end)
-wb.MouseButton1Click:Connect(function()W=not W wb.Text=W and"WALL: ON"or"WALL: OFF"wb.BackgroundColor3=W and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
-hb2.MouseButton1Click:Connect(function()H=not H hb2.Text=H and"HEIGHT: ON"or"HEIGHT: OFF"hb2.BackgroundColor3=H and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)end)
-task.spawn(function()
-while true do
-task.wait(0.15)
-if g and g.Parent then
-if ML then
-if LT and LT.Parent then
-local u=LT:FindFirstChild("Humanoid")
-if u and u.Health>0 then ll.Text="LOCK: "..LN ll.TextColor3=Color3.fromRGB(255,200,0)else ll.Text="LOCK: NONE"ll.TextColor3=Color3.fromRGB(150,150,150)end
-else ll.Text="LOCK: NONE"ll.TextColor3=Color3.fromRGB(150,150,150)end
-else ll.Text="LOCK OFF"ll.TextColor3=Color3.fromRGB(160,160,170)end
-if SL then
-if ST and ST.Parent then
-local u=ST:FindFirstChild("Humanoid")
-if u and u.Health>0 then ol.Text="SNIPER: "..SN ol.TextColor3=Color3.fromRGB(100,200,255)else ol.Text="SNIPER: DEAD (re-lock)"ol.TextColor3=Color3.fromRGB(255,100,100)end
-else ol.Text="SNIPER: DEAD (re-lock)"ol.TextColor3=Color3.fromRGB(255,100,100)end
-else ol.Text="SNIPER: OFF"ol.TextColor3=Color3.fromRGB(120,120,120)end
-sl.Text="SPIN: "..(IS and"ON"or"OFF")
-sl.TextColor3=IS and Color3.fromRGB(0,255,100)or Color3.fromRGB(150,150,150)
-local tt=GM()or GC()
-if tt then
-local a=GA(tt)
-al.Text=string.format("ANGLE: %.1f | %s",a,tt.name)
-al.TextColor3=a<MA and Color3.fromRGB(0,255,0)or Color3.fromRGB(200,200,200)
-else al.Text="ANGLE: ---"end
-cl.Text="CT:"..(CT and"OK"or"NO").." | ABL:"..(ABL and"OK"or"NO")
-end
-end
-end)
-SV(Rg)
-print("OK v43")
+local function X2(x)re
