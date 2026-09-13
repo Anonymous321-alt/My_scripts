@@ -177,7 +177,7 @@ print("CT:",CT and "OK"or"NO")
 print("ABL:",ABL and "OK"or"NO")
 task.spawn(function()
 while true do
-task.wait(3)
+task.wait(15)
 local nCT,nABL=FC()
 if nCT then CT=nCT end
 if nABL then ABL=nABL end
@@ -277,7 +277,7 @@ end
 end)
 task.spawn(function()
 while true do
-task.wait(0.1)
+task.wait(0.25)
 if En then
 local t=GM()
 if t then
