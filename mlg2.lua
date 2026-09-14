@@ -126,7 +126,7 @@ local c=L.Character
 if not c then return end
 local hb=c:FindFirstChild("Hitbox")
 local h=c:FindFirstChild("HumanoidRootPart")
-local w=h and h:FindFirstChild("Hitbox Weld")
+local w=c:FindFirstChild("Hitbox Weld")or(h and h:FindFirstChild("Hitbox Weld"))
 if not(hb and h and w)then return end
 local a=t.char:FindFirstChild("Right Arm")or t.char:FindFirstChild("RightHand")or t.part
 local v=hb.Position+Vector3.new(0,0.5,0)
