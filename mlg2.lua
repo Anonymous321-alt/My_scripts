@@ -121,26 +121,16 @@ return nil
 end
 return GC()
 end
-local function F(t)
-local c=L.Character
-if not c then return end
-local hb=c:FindFirstChild("Hitbox")
-local h=c:FindFirstChild("HumanoidRootPart")
-local w=c:FindFirstChild("Hitbox Weld")or(h and h:FindFirstChild("Hitbox Weld"))
-if not(hb and h and w)then return end
-local a=t.char:FindFirstChild("Right Arm")or t.char:FindFirstChild("RightHand")or t.part
-local v=hb.Position+Vector3.new(0,0.5,0)
-local s=hb.Size
-local C=w.C0
-local k=h.CFrame.LookVector
-local m=(a.Position-hb.Position).Magnitude
-pcall(function()S:FireServer("Use Punch",ID,t.char,v,m,s,C,a,a.Size,k)end)
-pcall(function()M:FireServer(t.char,h.Position,1.8757749795913696,t.char:FindFirstChild("Head"))end)
-end
 _G._SPA8=_G._SPA8 or{}
 local SS=_G._SPA8
 local PC=require(L.PlayerScripts["StarterPlayerScripts Package"].Controller.Character.Punch)
 if not SS.oP then SS.oP=PC.Punch end
+
+local function F(t)
+if not SS or not SS.oP or not PC then return end
+pcall(function()SS.oP(PC)end)
+end
+
 PC.Punch=function(s,...)
 local r=SS.oP(s,...)
 if not SL then
