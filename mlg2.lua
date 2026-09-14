@@ -125,13 +125,13 @@ _G._SPA8=_G._SPA8 or{}
 local SS=_G._SPA8
 local PC=require(L.PlayerScripts["StarterPlayerScripts Package"].Controller.Character.Punch)
 if not SS.oP then SS.oP=PC.Punch end
-
+local PCself=nil
 local function F(t)
-if not SS or not SS.oP or not PC then return end
-pcall(function()SS.oP(PC)end)
+if not SS or not SS.oP or not PCself then return end
+pcall(function()SS.oP(PCself)end)
 end
-
 PC.Punch=function(s,...)
+PCself=s
 local r=SS.oP(s,...)
 if not SL then
 if ML and not LT then
@@ -176,6 +176,7 @@ if ok and newPC and newPC~=PC then
 PC=newPC
 if not SS.oP then SS.oP=PC.Punch end
 PC.Punch=function(s,...)
+PCself=s
 local r=SS.oP(s,...)
 if not SL then
 if ML and not LT then
@@ -336,7 +337,6 @@ task.wait(0.5)
 end
 end
 end)
--- WALLHOP MODULE v13
 local WH_ENABLED=false
 local WH_MAX_HOPS=3
 local WH_MIN_HOPS=2
@@ -542,7 +542,6 @@ if not h or h.MoveDirection.Magnitude<0.1 then return end
 local hit=WH_findWall()
 if hit then WH_doHop(hit) end
 end)
-
 local g=Instance.new("ScreenGui",L:WaitForChild("PlayerGui"))
 g.Name="SPA"
 g.ResetOnSpawn=false
@@ -559,7 +558,7 @@ hb.BackgroundColor3=Color3.fromRGB(48,48,68)
 local t1=Instance.new("TextLabel",hb)
 t1.Size=UDim2.new(1,-50,1,0)
 t1.Position=UDim2.new(0,5,0,0)
-t1.Text="Punch+MLG v42"
+t1.Text="Punch+MLG v43"
 t1.BackgroundTransparency=1
 t1.TextColor3=Color3.new(1,1,1)
 t1.Font=Enum.Font.SourceSansBold
@@ -911,4 +910,4 @@ end
 end
 end)
 SV(Rg)
-print("OK v42 + WALLHOP")
+print("OK v43 + FIX")
