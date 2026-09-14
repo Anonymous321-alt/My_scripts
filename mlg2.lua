@@ -121,17 +121,26 @@ return nil
 end
 return GC()
 end
-_G._SPA8=_G._SPA8 or{}
-local SS=_G._SPA8
+local SS={}
 local PC=require(L.PlayerScripts["StarterPlayerScripts Package"].Controller.Character.Punch)
-if not SS.oP then SS.oP=PC.Punch end
-local PCself=nil
+SS.oP=PC.Punch
 local function F(t)
-if not SS or not SS.oP or not PCself then return end
-pcall(function()SS.oP(PCself)end)
+local c=L.Character
+if not c then return end
+local hb=c:FindFirstChild("Hitbox")
+local h=c:FindFirstChild("HumanoidRootPart")
+local w=c:FindFirstChild("Hitbox Weld")or(h and h:FindFirstChild("Hitbox Weld"))or c:FindFirstChild("Hitbox Weld",true)
+if not(hb and h and w)then return end
+local a=t.char:FindFirstChild("Right Arm")or t.char:FindFirstChild("RightHand")or t.part
+local v=hb.Position+Vector3.new(0,0.5,0)
+local s=hb.Size
+local C=w.C0
+local k=h.CFrame.LookVector
+local m=(a.Position-hb.Position).Magnitude
+pcall(function()S:FireServer("Use Punch",ID,t.char,v,m,s,C,a,a.Size,k)end)
+pcall(function()M:FireServer(t.char,h.Position,1.8757749795913696,t.char:FindFirstChild("Head"))end)
 end
 PC.Punch=function(s,...)
-PCself=s
 local r=SS.oP(s,...)
 if not SL then
 if ML and not LT then
@@ -174,9 +183,8 @@ if nABL then ABL=nABL end
 local ok,newPC=pcall(function()return require(L.PlayerScripts["StarterPlayerScripts Package"].Controller.Character.Punch)end)
 if ok and newPC and newPC~=PC then
 PC=newPC
-if not SS.oP then SS.oP=PC.Punch end
+SS.oP=PC.Punch
 PC.Punch=function(s,...)
-PCself=s
 local r=SS.oP(s,...)
 if not SL then
 if ML and not LT then
@@ -857,7 +865,7 @@ hb2.BackgroundColor3=H and Color3.fromRGB(40,160,90)or Color3.fromRGB(150,50,50)
 end)
 task.spawn(function()
 while true do
-task.wait(0.15)
+task.wait(0.35)
 if g and g.Parent then
 if ML then
 if LT and LT.Parent then
@@ -910,4 +918,4 @@ end
 end
 end)
 SV(Rg)
-print("OK v43 + FIX")
+print("OK v43 + HITBOX")
